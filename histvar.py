@@ -49,14 +49,10 @@ def readVarWithRange(varfile: str, event_range: list, only_short: bool, all_vari
                 rest+= 1
         restLabel = ">49bp events"
     else:
-        reallyLong = open("rlong.txt", "w")
         for variant in VCF(varfile):
             reflen = len(variant.REF)
             altlen = len(variant.ALT[0])
             if abs(reflen - altlen) > 49:
-                le = reflen - altlen
-                if le > 800000: 
-                    reallyLong.write(f"ref: {variant.REF}, \n alt: {variant.ALT}")
                 if reflen - altlen > 0 and reflen - altlen <= event_range[1]:
                     lenList.append(reflen - altlen)
                 elif reflen - altlen < 0 and reflen - altlen >= event_range[0]:
@@ -222,5 +218,5 @@ else:
 plt.savefig(name, dpi=300)
 print(f"Saved plot as {args.image}\n"
       f"Amount of plotted events: {len(lenList)} (largest in: {max(lenList)}bp, largest del: {min(lenList)}bp)\n"
-      f"Amount of not-plotted events: {rest}")
+      f"Amount of not-plotted events: {rest}, ({100 * round(len(lenList) / (len(lenList) + rest), 6)}% structural variants)")
 
