@@ -24,69 +24,114 @@ def isIncorrect(event_range: list, only_short: bool, all_variants: bool) -> str:
         return ""
 
 
-def readVarWithRange(varfile: str, event_range: list, only_short: bool, all_variants: bool) -> tuple:
+def readVarWithRange(varfile: str, event_range: list, only_short: bool, all_variants: bool, svlen: bool) -> tuple:
     lenList = []
     rest = 0
     restLabel = "<50bp events"
     if all_variants:
         for variant in VCF(varfile):
-            reflen = len(variant.REF)
-            altlen = len(variant.ALT[0])
-            if reflen - altlen > 0 and reflen - altlen <= event_range[1]:
-                lenList.append(reflen - altlen)
-            elif reflen - altlen < 0 and reflen - altlen >= event_range[0]:
-                lenList.append(reflen - altlen)
+            if svlen:
+                length = variant.INFO.get("SVLEN")
+                if length == None:
+                    length = 0
+            else:
+                reflen = len(variant.REF)
+                altlen = len(variant.ALT[0])
+                length = reflen - altlen
+            if length > 0 and length <= event_range[1]:
+                lenList.append(length)
+            elif length < 0 and length >= event_range[0]:
+                lenList.append(length)
     elif only_short:
         for variant in VCF(varfile):
-            reflen = len(variant.REF)
-            altlen = len(variant.ALT[0])
-            if abs(reflen - altlen) < 50:
-                if reflen - altlen > 0 and reflen - altlen <= event_range[1]:
-                    lenList.append(reflen - altlen)
-                elif reflen - altlen < 0 and reflen - altlen >= event_range[0]:
-                    lenList.append(reflen - altlen)
+            if svlen:
+                length = variant.INFO.get("SVLEN")
+                if length == None:
+                    length = 0
+            else:
+                reflen = len(variant.REF)
+                altlen = len(variant.ALT[0])
+                length = reflen - altlen
+            if abs(length) < 50:
+                if length > 0 and length <= event_range[1]:
+                    lenList.append(length)
+                elif length < 0 and length >= event_range[0]:
+                    lenList.append(length)
             else:
                 rest+= 1
         restLabel = ">49bp events"
     else:
         for variant in VCF(varfile):
-            reflen = len(variant.REF)
-            altlen = len(variant.ALT[0])
-            if abs(reflen - altlen) > 49:
-                if reflen - altlen > 0 and reflen - altlen <= event_range[1]:
-                    lenList.append(reflen - altlen)
-                elif reflen - altlen < 0 and reflen - altlen >= event_range[0]:
-                    lenList.append(reflen - altlen)
+            if svlen:
+                length = variant.INFO.get("SVLEN")
+                if length == None:
+                    length = 0
+            else:
+                reflen = len(variant.REF)
+                altlen = len(variant.ALT[0])
+                length = reflen - altlen
+            if abs(length) > 49:
+                if length > 0 and length <= event_range[1]:
+                    lenList.append(length)
+                elif length < 0 and length >= event_range[0]:
+                    lenList.append(length)
             else:
                 rest+= 1
     return (lenList, rest, restLabel)
 
 
-def readVar(varfile: str, only_short: bool, all_variants: bool) -> tuple:
+def readVar(varfile: str, only_short: bool, all_variants: bool, svlen: bool) -> tuple:
     lenList = []
     rest = 0
     restLabel = "<50bp events"
     variants = VCF(varfile)
     if all_variants:
         for variant in VCF(varfile):
-            reflen = len(variant.REF)
-            altlen = len(variant.ALT[0])
-            lenList.append(reflen - altlen)
+            if svlen:
+                length = variant.INFO.get("SVLEN")
+                try:
+                    length = int(length)
+                except:
+                    length = 0
+                print(length)
+            else:
+                reflen = len(variant.REF)
+                altlen = len(variant.ALT[0])
+                length = reflen - altlen
+            lenList.append(length)
     elif only_short:
         for variant in VCF(varfile):
-            reflen = len(variant.REF)
-            altlen = len(variant.ALT[0])
-            if abs(reflen - altlen) < 50:
-                lenList.append(reflen - altlen)
+            if svlen:
+                length = variant.INFO.get("SVLEN")
+                try:
+                    length = int(length)
+                except:
+                    length = 0
+                print(length)
+            else:
+                reflen = len(variant.REF)
+                altlen = len(variant.ALT[0])
+                length = reflen - altlen
+            if abs(length) < 50:
+                lenList.append(length)
             else:
                 rest+= 1
         restLabel = ">49bp events"
     else:
         for variant in VCF(varfile):
-            reflen = len(variant.REF)
-            altlen = len(variant.ALT[0])
-            if abs(reflen - altlen) > 49:
-                lenList.append(reflen - altlen)
+            if svlen:
+                length = variant.INFO.get("SVLEN")
+                try:
+                    length = int(length)
+                except:
+                    length = 0
+                print(length)
+            else:
+                reflen = len(variant.REF)
+                altlen = len(variant.ALT[0])
+                length = reflen - altlen
+            if abs(length) > 49:
+                lenList.append(length)
             else:
                 rest+= 1
     #else:
@@ -127,6 +172,8 @@ def parseConfig():
     parser.add_argument("file")
     parser.add_argument("-n", "--nomarker", action="store_false",
                         help="don't display unplotted-event-number marker")
+    parser.add_argument("-v", "--svlen", action="store_true",
+                        help="look up sv-length using 'SVLEN'-info parameter (isn't always supplied)")
     parser.add_argument("-i", "--image", action="store", nargs="?", metavar=("NAME"), const="noneSupplied", default="noneSupplied",
                         help="specify image path and name")
     parser.add_argument("-b", "--bins", action="store", nargs=1, type=int, default=[100],
@@ -137,6 +184,8 @@ def parseConfig():
                         help="show linear y-axis instead of logarithmic")
     parser.add_argument("-c", "--check", action="store_true",
                         help="check whether input is a valid vcf file")
+    parser.add_argument("-t", "--title", action="store", nargs=1, type=str, default=[""],
+                        help="add title to graph")
     variant_types_group = parser.add_mutually_exclusive_group()
     variant_types_group.add_argument("-s", "--short", action="store_true",
                         help="plot histogram of short (<49bp) variants instead")
@@ -192,9 +241,9 @@ if args.range != [0,0]:
         print(isIncorrect(args.range, args.short, args.all))
         exit()
     else:
-        lenList, rest, restLabel = readVarWithRange(args.file, args.range, args.short, args.all)
+        lenList, rest, restLabel = readVarWithRange(args.file, args.range, args.short, args.all, args.svlen)
 else:
-    lenList, rest, restLabel = readVar(args.file, args.short, args.all)
+    lenList, rest, restLabel = readVar(args.file, args.short, args.all, args.svlen)
 
 if args.nomarker and not args.all:
     plt.axhline(rest, color=(0.8,0.2,0), alpha=0.7, label=f"amount of {restLabel}")
@@ -208,8 +257,12 @@ ar = np.array(lenList)
 plt.xlabel("indel Length (bp)")
 plt.ylabel("amount of events")
 sns.histplot(data=ar, bins=args.bins[0], )
+
+if args.title[0]:
+    plt.title(args.title[0])
+
 if args.image != "noneSupplied":
-    name = args.image
+    name = IMGDIR + "/" + args.image
 else:
     now = datetime.now()
     filename =  args.file.split("/")[-1]
